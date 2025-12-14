@@ -1,0 +1,7 @@
+{
+  "name": "圣诞树超哇塞版",
+  "description": "A high-end 3D Christmas experience controlled by hand gestures using MediaPipe and Three.js.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
