@@ -406,7 +406,7 @@ export const MagicScene: React.FC<SceneProps> = ({ appState, gesture, photos, fo
     // 3. Ribbon 1: White (Braided)
     const ribbonSpirals = 5;
     const braidFreq = 30; // Frequency of the braid weave
-    const braidAmp =0.4; // Amplitude of the braid (width of separation)
+    const braidAmp = 0.4; // Amplitude of the braid (width of separation)
 
     for (let i = 0; i < RIBBON_PARTICLE_COUNT; i++) {
         const t = i / RIBBON_PARTICLE_COUNT;
