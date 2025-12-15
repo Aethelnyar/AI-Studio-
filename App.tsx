@@ -2,7 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { HandController } from './components/HandController';
 import { MagicScene } from './components/MagicScene';
 import { AppState, HandGestureData } from './types';
-
+// --- 请新增下面这两行 ---
+// @ts-ignore
+import localMusicPath from './music.mp3';
 // Constants
 // ---------------------------------------------------------------------------
 // 部署说明 (DEPLOYMENT INSTRUCTIONS):
@@ -10,7 +12,7 @@ import { AppState, HandGestureData } from './types';
 // 2. 代码会自动优先加载 "./music.mp3"。
 // 3. 如果找不到本地文件 (例如在现在的预览环境中)，它会自动回退使用下面的 ONLINE_FALLBACK_URL。
 // ---------------------------------------------------------------------------
-const LOCAL_MUSIC_URL = "./music.mp3"; 
+const LOCAL_MUSIC_URL = localMusicPath;
 const ONLINE_FALLBACK_URL = "https://upload.wikimedia.org/wikipedia/commons/9/9b/We_Wish_You_A_Merry_Christmas.ogg";
 const MAX_PHOTOS = 20;
 
