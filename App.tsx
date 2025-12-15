@@ -5,7 +5,7 @@ import { AppState, HandGestureData } from './types';
 
 // Built-in Christmas Playlist
 const PLAYLIST = [
-    { title: "Jingle Bells", src: "https://upload.wikimedia.org/wikipedia/commons/e/e6/Kevin_MacLeod_-_Jingle_Bells.ogg" },
+    { title: "Jingle Bells", src: "./bgm.mp3" },
     { title: "We Wish You a Merry Christmas", src: "https://upload.wikimedia.org/wikipedia/commons/9/9b/We_Wish_You_A_Merry_Christmas.ogg" },
     { title: "Silent Night", src: "https://upload.wikimedia.org/wikipedia/commons/e/e0/Silent_Night_by_Kevin_MacLeod.ogg" }
 ];
