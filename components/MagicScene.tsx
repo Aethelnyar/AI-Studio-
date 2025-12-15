@@ -8,7 +8,7 @@ import { AppState, SceneItem, HandGestureData } from '../types';
 // Constants
 const TREE_HEIGHT = 16;
 const TREE_RADIUS_BASE = 6.0;
-const ORNAMENT_COUNT = 300; // Increased count for density
+const ORNAMENT_COUNT = 300; 
 const FOIL_COUNT = 200; 
 const RIBBON_PARTICLE_COUNT = 400; 
 const LIGHT_COUNT = 100; 
@@ -20,7 +20,8 @@ const SCATTER_RADIUS_Z = 20;
 const PALETTE = {
     TWILIGHT: '#2d2436', // Background
     RED: '#C41E3A',       // Cardinal Red
-    GOLD: '#FFD700',      // Glowing Gold
+    GOLD: '#FFD700',      // Glowing Gold (Used for lights/sparks)
+    METALLIC_GOLD: '#CFB53B', // Real Metallic Gold (Darker base for reflection)
     SILVER: '#E0E0E0',    // Shimmering Silver
     GREEN: '#1B4D3E',     // Evergreen
     CREAM: '#F2E8C9',     // Vintage Cream/Paper
@@ -115,9 +116,10 @@ interface ItemProps {
   targetMode: AppState;
   gesture: HandGestureData;
   focusId: string | null;
+  onSelect: (id: string) => void;
 }
 
-const MagicItem: React.FC<ItemProps> = ({ item, targetMode, gesture, focusId }) => {
+const MagicItem: React.FC<ItemProps> = ({ item, targetMode, gesture, focusId, onSelect }) => {
   const meshRef = useRef<any>(null);
   const { camera } = useThree(); 
   
@@ -125,11 +127,12 @@ const MagicItem: React.FC<ItemProps> = ({ item, targetMode, gesture, focusId }) 
   const twinkleSpeed = useMemo(() => Math.random() * 3 + 2, []);
 
   // Material helpers
-  const isGold = useMemo(() => item.color && item.color.getHexString() === new THREE.Color(PALETTE.GOLD).getHexString(), [item.color]);
+  const isMetallicGold = useMemo(() => item.color && item.color.getHexString() === new THREE.Color(PALETTE.METALLIC_GOLD).getHexString(), [item.color]);
   const isSilver = useMemo(() => item.color && item.color.getHexString() === new THREE.Color(PALETTE.SILVER).getHexString(), [item.color]);
   const isFoil = item.id.includes('foil');
   const isLight = item.id.includes('light');
   const isRibbon = item.id.includes('ribbon');
+  const isPhoto = item.type === 'photo';
   
   // Matte texture for Cream/Green
   const isMatte = useMemo(() => {
@@ -186,16 +189,24 @@ const MagicItem: React.FC<ItemProps> = ({ item, targetMode, gesture, focusId }) 
         if (item.type !== 'photo') {
              const mat = meshRef.current.material as THREE.MeshPhysicalMaterial;
              if (mat) {
+                // Lights twinkle heavily, Metallic items glimmer slightly
                 const sineWave = Math.sin(time * twinkleSpeed + randomOffset);
                 const flash = sineWave > 0.8 ? 2.0 : 0.0;
                 
-                // Enhanced emissive for glow
                 const foilBonus = isFoil ? 2.0 : 0;
-                const goldBonus = isGold ? 1.0 : 0;
-
-                const baseEmissive = isLight ? 4.0 : (isRibbon ? 3.0 : (isMatte ? 0.1 : 0.6));
                 
-                mat.emissiveIntensity = THREE.MathUtils.lerp(mat.emissiveIntensity, baseEmissive + flash + foilBonus + goldBonus, 0.1);
+                // Base Emissive Calculation
+                let baseEmissive = 0;
+                if (isLight) baseEmissive = 4.0;
+                else if (isRibbon) baseEmissive = 3.0;
+                else if (isMetallicGold || isSilver) baseEmissive = 0.2; // LOW emissive for metal to allow reflection
+                else if (isMatte) baseEmissive = 0.1;
+                else baseEmissive = 0.6;
+
+                // Add flash only to lights or foils, not solid metal balls
+                const dynamicFlash = (isLight || isFoil) ? flash : 0;
+
+                mat.emissiveIntensity = THREE.MathUtils.lerp(mat.emissiveIntensity, baseEmissive + dynamicFlash + foilBonus, 0.1);
              }
         }
     } else {
@@ -203,18 +214,46 @@ const MagicItem: React.FC<ItemProps> = ({ item, targetMode, gesture, focusId }) 
         if (item.type !== 'photo') {
             const mat = meshRef.current.material as THREE.MeshPhysicalMaterial;
             if (mat) {
-                const targetEmissive = isLight ? 4.0 : (isRibbon ? 3.0 : (isFoil || isGold ? 1.5 : (isMatte ? 0.1 : 0.6)));
+                let targetEmissive = 0.5;
+                if (isLight) targetEmissive = 4.0;
+                else if (isRibbon) targetEmissive = 3.0;
+                else if (isFoil) targetEmissive = 1.5;
+                else if (isMetallicGold || isSilver) targetEmissive = 0.2; // Metal stays dark to reflect
+                else if (isMatte) targetEmissive = 0.1;
+
                 mat.emissiveIntensity = THREE.MathUtils.lerp(mat.emissiveIntensity, targetEmissive, 0.1);
             }
         }
     }
   });
 
-  const isPhoto = item.type === 'photo';
+  const handlePointerDown = (e: any) => {
+      if (isPhoto) {
+          e.stopPropagation();
+          onSelect(item.id);
+      }
+  };
+
+  const handlePointerOver = (e: any) => {
+      if (isPhoto) {
+          document.body.style.cursor = 'pointer';
+      }
+  };
+  
+  const handlePointerOut = (e: any) => {
+      if (isPhoto) {
+          document.body.style.cursor = 'default';
+      }
+  };
 
   if (isPhoto && item.textureUrl) {
     return (
-        <group ref={meshRef}>
+        <group 
+            ref={meshRef} 
+            onClick={handlePointerDown} 
+            onPointerOver={handlePointerOver} 
+            onPointerOut={handlePointerOut}
+        >
             <PhotoPanel url={item.textureUrl} isFocused={focusId === item.id} />
         </group>
     );
@@ -224,11 +263,14 @@ const MagicItem: React.FC<ItemProps> = ({ item, targetMode, gesture, focusId }) 
 
   // Material Logic
   // Metallic items: Gold, Silver, Foil, Ribbon
-  const isMetallic = isGold || isSilver || isFoil || isRibbon;
+  const isMetallic = isMetallicGold || isSilver || isFoil || isRibbon;
   
   const roughness = isMetallic ? 0.15 : (isMatte ? 0.8 : 0.2);
   const metalness = isMetallic ? 1.0 : (isMatte ? 0.0 : (isLight ? 0.0 : 0.8));
   const clearcoat = (isMatte || isLight) ? 0.0 : 1.0;
+
+  // Initial Emissive
+  const initialEmissive = isLight ? 4.0 : (isRibbon ? 3.0 : (isFoil ? 1.0 : (isMetallic ? 0.2 : 0.4)));
 
   // Geometry Selection
   let GeometryComponent = <boxGeometry args={[item.scale, item.scale, item.scale]} />;
@@ -243,8 +285,7 @@ const MagicItem: React.FC<ItemProps> = ({ item, targetMode, gesture, focusId }) 
         roughness={roughness} 
         metalness={metalness}
         emissive={materialColor}
-        // Base emissive intensity
-        emissiveIntensity={isLight ? 4.0 : (isRibbon ? 3.0 : (isFoil || isGold ? 1.0 : 0.4))}
+        emissiveIntensity={initialEmissive}
         clearcoat={clearcoat}
         clearcoatRoughness={0.1}
       />
@@ -291,9 +332,10 @@ interface SceneProps {
   gesture: HandGestureData;
   photos: string[];
   focusId: string | null;
+  onPhotoSelect: (id: string) => void;
 }
 
-export const MagicScene: React.FC<SceneProps> = ({ appState, gesture, photos, focusId }) => {
+export const MagicScene: React.FC<SceneProps> = ({ appState, gesture, photos, focusId, onPhotoSelect }) => {
   
   const items = useMemo(() => {
     const tempItems: SceneItem[] = [];
@@ -319,8 +361,8 @@ export const MagicScene: React.FC<SceneProps> = ({ appState, gesture, photos, fo
         const colors = [
             new THREE.Color(PALETTE.RED),
             new THREE.Color(PALETTE.GREEN),
-            new THREE.Color(PALETTE.GOLD), // Restored Gold
-            new THREE.Color(PALETTE.SILVER), // Added Silver
+            new THREE.Color(PALETTE.METALLIC_GOLD), // Use the Metallic Gold here
+            new THREE.Color(PALETTE.SILVER), 
         ];
         
         tempItems.push({
@@ -356,22 +398,30 @@ export const MagicScene: React.FC<SceneProps> = ({ appState, gesture, photos, fo
             treePos,
             scatterPos,
             rotation: new THREE.Vector3(Math.random(), Math.random(), Math.random()),
-            color: Math.random() > 0.4 ? new THREE.Color(PALETTE.GOLD) : new THREE.Color(PALETTE.SILVER),
+            color: Math.random() > 0.4 ? new THREE.Color(PALETTE.METALLIC_GOLD) : new THREE.Color(PALETTE.SILVER),
             scale: Math.random() * 0.4 + 0.2
         });
     }
 
-    // 3. Ribbon 1: White
+    // 3. Ribbon 1: White (Braided)
     const ribbonSpirals = 5;
+    const braidFreq = 30; // Frequency of the braid weave
+    const braidAmp =0.4; // Amplitude of the braid (width of separation)
+
     for (let i = 0; i < RIBBON_PARTICLE_COUNT; i++) {
         const t = i / RIBBON_PARTICLE_COUNT;
         const h = (t * TREE_HEIGHT) - (TREE_HEIGHT / 2);
         const layerPhase = (t * layers) % 1;
         const baseRadius = (1 - t) * TREE_RADIUS_BASE;
         const layerKick = (1 - layerPhase) * 1.8; 
-        const r = baseRadius + layerKick + 0.5; 
+        const r = baseRadius + layerKick + 1.3; 
 
-        const theta = t * Math.PI * 2 * ribbonSpirals;
+        // Base spiral path
+        const baseTheta = t * Math.PI * 2 * ribbonSpirals;
+        
+        // Add Sine Wave offset for Braiding effect
+        const theta = baseTheta + Math.sin(t * braidFreq) * braidAmp;
+
         const treePos = new THREE.Vector3(r * Math.cos(theta), h, r * Math.sin(theta));
         const scatterPos = new THREE.Vector3(
             (Math.random() - 0.5) * SCATTER_RADIUS_X * 2.5,
@@ -390,7 +440,7 @@ export const MagicScene: React.FC<SceneProps> = ({ appState, gesture, photos, fo
         });
     }
 
-    // 4. Ribbon 2: Deep Blue (Parallel)
+    // 4. Ribbon 2: Deep Blue (Interlaced with White)
     for (let i = 0; i < RIBBON_PARTICLE_COUNT; i++) {
         const t = i / RIBBON_PARTICLE_COUNT;
         const h = (t * TREE_HEIGHT) - (TREE_HEIGHT / 2);
@@ -399,7 +449,11 @@ export const MagicScene: React.FC<SceneProps> = ({ appState, gesture, photos, fo
         const layerKick = (1 - layerPhase) * 1.8; 
         const r = baseRadius + layerKick + 0.5; 
 
-        const theta = (t * Math.PI * 2 * ribbonSpirals) + 0.2;
+        // Base spiral path
+        const baseTheta = t * Math.PI * 2 * ribbonSpirals;
+
+        // Opposite Phase Sine Wave for Interlacing
+        const theta = baseTheta - Math.sin(t * braidFreq) * braidAmp;
         
         const treePos = new THREE.Vector3(r * Math.cos(theta), h, r * Math.sin(theta));
         const scatterPos = new THREE.Vector3(
@@ -413,9 +467,9 @@ export const MagicScene: React.FC<SceneProps> = ({ appState, gesture, photos, fo
             type: 'box', 
             treePos,
             scatterPos,
-            rotation: new THREE.Vector3(t, t, 0),
+            rotation: new THREE.Vector3(t, t, 10),
             color: new THREE.Color(PALETTE.DEEP_BLUE), 
-            scale: 0.27
+            scale: 0.3
         });
     }
 
@@ -452,15 +506,25 @@ export const MagicScene: React.FC<SceneProps> = ({ appState, gesture, photos, fo
 
   const allItems = useMemo(() => {
     const photoItems: SceneItem[] = photos.map((url, i) => {
+        // Tree Mode Calculations (Unchanged)
         const h = (i / (photos.length || 1)) * (TREE_HEIGHT * 0.8) - (TREE_HEIGHT / 3);
         const r = (1 - ((h + TREE_HEIGHT/2) / TREE_HEIGHT)) * (TREE_RADIUS_BASE + 2); 
         const theta = i * (Math.PI * 2 / (photos.length || 1)) + 1;
+        
+        // Scatter Mode Calculations (Updated: Smaller Cylindrical Ring)
+        const scatterRadius = 12; // Reduced from 24 to 12 for better visibility
+        const scatterAngle = (i / (photos.length || 1)) * Math.PI * 2;
         
         return {
             id: `photo-${i}`,
             type: 'photo',
             treePos: new THREE.Vector3(r * Math.cos(theta), h, r * Math.sin(theta)),
-            scatterPos: new THREE.Vector3((Math.random()-0.5)*20, (Math.random()-0.5)*20, 5),
+            // New Ring Arrangement
+            scatterPos: new THREE.Vector3(
+                Math.cos(scatterAngle) * scatterRadius,
+                (Math.random() - 0.5) * 16, // Random vertical spread (-8 to 8)
+                Math.sin(scatterAngle) * scatterRadius
+            ),
             rotation: new THREE.Vector3(0,0,0),
             textureUrl: url,
             scale: 1,
@@ -504,6 +568,7 @@ export const MagicScene: React.FC<SceneProps> = ({ appState, gesture, photos, fo
                     targetMode={appState} 
                     gesture={gesture} 
                     focusId={focusId}
+                    onSelect={onPhotoSelect}
                 />
             ))}
         </group>

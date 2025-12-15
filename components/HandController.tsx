@@ -16,11 +16,11 @@ interface Props {
 const EyeIcon = ({ visible }: { visible: boolean }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         {visible ? (
-             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         ) : (
-             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
         )}
-        {visible && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />}
+        {visible && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />}
     </svg>
 );
 
@@ -148,14 +148,14 @@ export const HandController: React.FC<Props> = ({ onGesture }) => {
   }
 
   return (
-    <div className={`fixed bottom-4 right-4 z-50 transition-all duration-300 ${isVisible ? 'w-32 h-24 bg-black/50 border-gold-500' : 'w-8 h-8 bg-transparent border-transparent'} rounded-lg overflow-hidden border-2 shadow-lg backdrop-blur`}>
+    <div className={`fixed bottom-4 right-4 z-50 transition-all duration-500 ease-in-out ${isVisible ? 'w-36 h-28 opacity-100' : 'w-8 h-8 opacity-60'} rounded-xl overflow-hidden border border-[#F2E8C9]/20 shadow-xl backdrop-blur-md bg-[#2d2436]/40 group hover:border-[#F2E8C9]/40`}>
       
-      {!loaded && isVisible && <div className="absolute inset-0 flex items-center justify-center text-xs text-gold-300">Loading AI...</div>}
+      {!loaded && isVisible && <div className="absolute inset-0 flex items-center justify-center text-[10px] text-[#F2E8C9]/50 tracking-widest uppercase">Initializing...</div>}
       
       {/* Video Element - Only visual opacity changes, element remains for processing */}
       <video 
         ref={videoRef} 
-        className={`absolute inset-0 w-full h-full object-cover transform scale-x-[-1] transition-opacity duration-300 ${isVisible ? 'opacity-50' : 'opacity-0'}`} 
+        className={`absolute inset-0 w-full h-full object-cover transform scale-x-[-1] transition-opacity duration-700 ${isVisible ? 'opacity-60' : 'opacity-0'} contrast-110 hover:opacity-100 transition-all`} 
         playsInline 
       />
       
@@ -164,14 +164,14 @@ export const HandController: React.FC<Props> = ({ onGesture }) => {
       {/* Toggle Button */}
       <button 
         onClick={() => setIsVisible(!isVisible)}
-        className="absolute top-1 right-1 z-50 text-white/70 hover:text-[#FFD700] transition-colors p-1 rounded-full bg-black/20 hover:bg-black/50"
-        title={isVisible ? "Hide Camera View" : "Show Camera View"}
+        className="absolute top-2 right-2 z-50 text-[#F2E8C9]/50 hover:text-[#FFD700] transition-colors rounded-full"
+        title={isVisible ? "Minimize" : "Show Camera"}
       >
         <EyeIcon visible={isVisible} />
       </button>
 
-      {/* Red Dot Indicator (Active) */}
-      {loaded && isVisible && <div className="absolute top-1 left-1 w-2 h-2 bg-red-500 rounded-full animate-pulse pointer-events-none" />}
+      {/* Status Dot */}
+      {loaded && isVisible && <div className="absolute bottom-2 left-2 w-1.5 h-1.5 bg-green-500/80 rounded-full animate-pulse pointer-events-none shadow-[0_0_5px_rgba(0,255,0,0.5)]" />}
     </div>
   );
 };
